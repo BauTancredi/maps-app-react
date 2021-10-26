@@ -12,31 +12,31 @@ const initialValue = {
 
 const MapPage = () => {
   const mapDiv = useRef();
-  const [map, setMap] = useState(null);
+  const map = useRef();
   const [coords, setCoords] = useState(initialValue);
 
   useEffect(() => {
-    const map = new mapboxgl.Map({
+    const mapBox = new mapboxgl.Map({
       container: mapDiv.current,
       style: "mapbox://styles/mapbox/streets-v11",
       center: [initialValue.lng, initialValue.lat],
       zoom: initialValue.zoom,
     });
 
-    setMap(map);
+    map.current = mapBox;
   }, []);
 
   // Move map
   useEffect(() => {
-    map?.on("move", () => {
-      const { lng, lat } = map.getCenter();
+    map.current?.on("move", () => {
+      const { lng, lat } = map.current?.getCenter();
       setCoords({
         lng: lng.toFixed(4),
         lat: lat.toFixed(4),
-        zoom: map.getZoom().toFixed(2),
+        zoom: map.current?.getZoom().toFixed(2),
       });
     });
-  }, [map]);
+  }, []);
 
   return (
     <>
