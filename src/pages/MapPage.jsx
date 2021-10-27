@@ -1,8 +1,7 @@
-import React, { useRef, useEffect, useState } from "react";
-import mapboxgl from "mapbox-gl";
+import React, { useContext, useEffect } from "react";
 
-mapboxgl.accessToken =
-  "pk.eyJ1IjoiYmF1dGFuY3JlZGkiLCJhIjoiY2t2Nm43NWdmMWg0ODJucDYycHI0MjZrZCJ9.dOc_Ne1b2dPX0lr6WIRaEg";
+import { useMapbox } from "../hooks/useMapbox";
+import { SocketContext } from "../context/SocketContext";
 
 const initialValue = {
   lng: 5,
@@ -11,32 +10,41 @@ const initialValue = {
 };
 
 const MapPage = () => {
-  const mapDiv = useRef();
-  const map = useRef();
-  const [coords, setCoords] = useState(initialValue);
+  const { coords, mapDiv, newMarker$, moveMarker$, addMarker, updatePosition } =
+    useMapbox(initialValue);
+  const { socket } = useContext(SocketContext);
 
   useEffect(() => {
-    const mapBox = new mapboxgl.Map({
-      container: mapDiv.current,
-      style: "mapbox://styles/mapbox/streets-v11",
-      center: [initialValue.lng, initialValue.lat],
-      zoom: initialValue.zoom,
+    newMarker$.subscribe((marker) => {
+      socket.emit("new-marker", marker);
     });
+  }, [newMarker$, socket]);
 
-    map.current = mapBox;
-  }, []);
-
-  // Move map
   useEffect(() => {
-    map.current?.on("move", () => {
-      const { lng, lat } = map.current?.getCenter();
-      setCoords({
-        lng: lng.toFixed(4),
-        lat: lat.toFixed(4),
-        zoom: map.current?.getZoom().toFixed(2),
-      });
+    moveMarker$.subscribe((marker) => {
+      socket.emit("marker-updated", marker);
     });
-  }, []);
+  }, [socket, moveMarker$]);
+
+  useEffect(() => {
+    socket.on("marker-updated", (marker) => {
+      updatePosition(marker);
+    });
+  }, [socket, updatePosition]);
+
+  useEffect(() => {
+    socket.on("new-marker", (marker) => {
+      addMarker(marker, marker.id);
+    });
+  }, [socket, addMarker]);
+
+  useEffect(() => {
+    socket.on("active-markers", (markers) => {
+      for (const key of Object.keys(markers)) {
+        addMarker(markers[key], key);
+      }
+    });
+  }, [socket, addMarker]);
 
   return (
     <>
